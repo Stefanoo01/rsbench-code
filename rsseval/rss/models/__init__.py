@@ -5,16 +5,19 @@ import importlib
 def get_all_models():
     return [
         model.split(".")[0]
-        for model in os.listdir("models")
+        for model in os.listdir(os.path.dirname(__file__))
         if not model.find("__") > -1 and "py" in model
     ]
 
 
 names = {}
 for model in get_all_models():
-    mod = importlib.import_module("models." + model)
-    class_name = {x.lower(): x for x in mod.__dir__()}[model.replace("_", "")]
-    names[model] = getattr(mod, class_name)
+    try:
+        mod = importlib.import_module("models." + model)
+        class_name = {x.lower(): x for x in mod.__dir__()}[model.replace("_", "")]
+        names[model] = getattr(mod, class_name)
+    except ImportError:
+        pass
 
 
 def get_model(args, encoder, decoder, n_images, c_split):

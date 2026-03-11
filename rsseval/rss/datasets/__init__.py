@@ -7,7 +7,7 @@ from argparse import Namespace
 def get_all_datasets():
     return [
         data.split(".")[0]
-        for data in os.listdir("datasets")
+        for data in os.listdir(os.path.dirname(__file__))
         if not data.find("__") > -1 and "py" in data
     ]
 

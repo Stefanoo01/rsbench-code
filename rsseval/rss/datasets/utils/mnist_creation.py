@@ -92,20 +92,31 @@ class nMNIST(Dataset):
 
         return newimage, label, concepts
 
-    def read_data(self, path, split):
-        """
-        Returns images and labels
-        """
-        try:
-            # print("Loading data...")
-            data = load(path)
-            # print("Loaded.")
-        except:
-            print("No dataset found.")
+    def read_data(self, path: str, split: str):
+        import os
+        import torch
+
+        # If a directory is passed, look for a single .pt file inside
+        if os.path.isdir(path):
+            pts = [f for f in os.listdir(path) if f.endswith(".pt")]
+            if len(pts) == 0:
+                raise FileNotFoundError(f"No .pt file found inside directory: {path}")
+            if len(pts) > 1:
+                # Prefer the main dataset file if present
+                if "2mnist_10digits.pt" in pts:
+                    path = os.path.join(path, "2mnist_10digits.pt")
+                else:
+                    raise FileExistsError(f"Multiple .pt files found inside {path}: {pts}")
+            else:
+                path = os.path.join(path, pts[0])
+
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"Dataset file not found: {path}")
+
+        data = torch.load(path, weights_only=False)
 
         images = data[split]["images"]
         labels = data[split]["labels"]
-
         return images, labels
 
     def reset_counter(self):
@@ -255,22 +266,24 @@ def load_data(data_file, data_folder, c_sup=1, which_c=[-1], args=None):
     val_set = nMNIST("val", data_path=data_path, args=args)
     test_set = nMNIST("test", data_path=data_path, args=args)
 
-    r_seq = np.load("data/rn.npy")
-    # Generate deterministic random sequence
-    # r_seq = generate_r_seq(len(train_set))
-
-    numel = 0
-
-    for i in range(len(train_set)):
-        if r_seq[i] > c_sup:
-            train_set.concepts[i] = -1
-        elif not (which_c[0] == -1):
-            if train_set.concepts[i, 0] not in which_c:
-                train_set.concepts[i, 0] = -1
-            if train_set.concepts[i, 1] not in which_c:
-                train_set.concepts[i, 1] = -1
+    if c_sup < 1.0:
+        rn_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "rn.npy")
+        if os.path.exists(rn_path):
+            r_seq = np.load(rn_path)
         else:
-            numel += 1
+            r_seq = generate_r_seq(len(train_set))
+        
+        numel = 0
+        for i in range(len(train_set)):
+            if r_seq[i] > c_sup:
+                train_set.concepts[i] = -1
+            elif not (which_c[0] == -1):
+                if train_set.concepts[i, 0] not in which_c:
+                    train_set.concepts[i, 0] = -1
+                if train_set.concepts[i, 1] not in which_c:
+                    train_set.concepts[i, 1] = -1
+            else:
+                numel += 1
 
     # print("Giving supervision to:", numel)
 
