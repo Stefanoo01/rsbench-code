@@ -25,6 +25,7 @@ def ADDMNIST_Classification(out_dict: dict, args):
         "mnistclip",
         "mnistnn",
         "mnistcbm",
+        "mnistsumparitycbm",
     ]:
         loss = F.nll_loss(out.log(), labels, reduction="mean")
     elif args.model in [

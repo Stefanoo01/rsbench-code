@@ -11,10 +11,15 @@ from torchvision import datasets
 from tqdm import tqdm
 import copy, itertools
 
+from sumparity_split import sum_parity_labels
+
 
 def get_label(c1, c2, labels, args):
     if args.task == "addition":
         return labels
+
+    elif args.task == "sum_parity":
+        return sum_parity_labels(c1, c2)
 
     elif args.task == "product" and not args.model in ["mnistltn", "mnistltnrec"]:
         n_queries = [0]

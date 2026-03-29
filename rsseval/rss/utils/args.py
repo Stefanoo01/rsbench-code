@@ -28,6 +28,7 @@ def add_experiment_args(parser: ArgumentParser) -> None:
         type=str,
         choices=[
             "addition",
+            "sum_parity",
             "product",
             "multiop",
             "base",
