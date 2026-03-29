@@ -8,7 +8,7 @@ from backbones.disjointmnistcnn import DisjointMNISTAdditionCNN
 from backbones.mnistcnn import MNISTAdditionCNN
 from datasets.utils.base_dataset import BaseDataset, get_loader
 from datasets.utils.mnist_creation import load_2MNIST
-from sumparity_split import in_distribution_mask, ood_mask
+from sumparity_split import default_dataset_dimensions, in_distribution_mask, ood_mask
 
 
 def _apply_mask(dataset, mask: np.ndarray):
@@ -24,7 +24,10 @@ class SUMPARITYMNIST(BaseDataset):
     DATADIR = "data/raw"
 
     def get_data_loaders(self):
+        n_digits = getattr(self.args, "n_digits", 10)
         dataset_train, dataset_val, dataset_test = load_2MNIST(
+            n_digits=n_digits,
+            dataset_dimensions=default_dataset_dimensions(n_digits),
             c_sup=self.args.c_sup, which_c=self.args.which_c, args=self.args
         )
 
@@ -49,23 +52,32 @@ class SUMPARITYMNIST(BaseDataset):
         return self.train_loader, self.val_loader, self.test_loader
 
     def get_backbone(self):
+        n_digits = getattr(self.args, "n_digits", 10)
         if self.args.joint:
             if self.args.backbone == "neural":
                 return MNISTAdditionCNN(), None
-            return MNISTPairsEncoder(), MNISTPairsDecoder()
+            return (
+                MNISTPairsEncoder(c_dim=2 * n_digits, latent_dim=2 * n_digits),
+                MNISTPairsDecoder(c_dim=2 * n_digits, latent_dim=2 * n_digits),
+            )
 
         if self.args.backbone == "neural":
             return DisjointMNISTAdditionCNN(n_images=self.get_split()[0]), None
 
-        return MNISTSingleEncoder(), MNISTPairsDecoder()
+        return (
+            MNISTSingleEncoder(c_dim=n_digits),
+            MNISTPairsDecoder(c_dim=2 * n_digits, latent_dim=2 * n_digits),
+        )
 
     def get_split(self):
+        n_digits = getattr(self.args, "n_digits", 10)
         if self.args.joint:
-            return 1, (10, 10)
-        return 2, (10,)
+            return 1, (n_digits, n_digits)
+        return 2, (n_digits,)
 
     def get_concept_labels(self):
-        return [str(i) for i in range(10)]
+        n_digits = getattr(self.args, "n_digits", 10)
+        return [str(i) for i in range(n_digits)]
 
     def get_labels(self):
         return ["even", "odd"]
@@ -82,7 +94,9 @@ class SUMPARITYMNIST(BaseDataset):
         return _apply_mask(ood_test, ood_mask(ood_test.real_concepts))
 
     def print_stats(self):
+        n_digits = getattr(self.args, "n_digits", 10)
         print("## Statistics ##")
+        print("Digit range", f"0..{n_digits - 1}")
         print("Train samples", len(self.dataset_train.data))
         print("Validation samples", len(self.dataset_val.data))
         print("Test ID samples", len(self.dataset_test.data))

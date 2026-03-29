@@ -39,7 +39,7 @@ class MnistSumParityCBM(CBMModule):
         self.n_images = n_images
         self.c_split = c_split
 
-        self.n_facts = 10 if not args.dataset in ["halfmnist", "restrictedmnist"] else 5
+        self.n_facts = getattr(args, "n_digits", 10)
         self.nr_classes = 2
 
         self.opt = None
